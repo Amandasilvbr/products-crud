@@ -18,7 +18,508 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
+    "paths": {
+        "/login": {
+            "post": {
+                "description": "Autentica um usuário com base em e-mail e senha, retornando um token JWT válido para endpoints protegidos.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Autentica um usuário",
+                "parameters": [
+                    {
+                        "description": "User credentials (email and password)",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UserLoginDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful authentication with JWT token",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.LoginResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products": {
+            "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Recupera uma lista de todos os produtos do banco de dados",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Recupera todos os produtos",
+                "responses": {
+                    "200": {
+                        "description": "Products retrieved successfully",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dtos.ProductResponseDTO"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Atualiza produtos existentes com base em um único objeto ou em uma matriz de objetos no corpo da solicitação",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Atualiza um ou mais produtos",
+                "parameters": [
+                    {
+                        "description": "Product data to update",
+                        "name": "products",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dtos.UpdateProductDTO"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product(s) updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UpdateProductResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Cria novos produtos com base em um único objeto ou em uma matriz de objetos no corpo da solicitação",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Cria um ou mais produtos",
+                "parameters": [
+                    {
+                        "description": "Product data to create",
+                        "name": "products",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dtos.CreateProductDTO"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product(s) created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CreateProductResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Exclui produtos do banco de dados com base em um único SKU ou em uma matriz de SKUs no corpo da solicitação",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Deleta um ou mais produtos",
+                "parameters": [
+                    {
+                        "description": "SKUs of products to delete",
+                        "name": "skus",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product(s) deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.DeleteProductResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{sku}": {
+            "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Recupera os detalhes de um único produto usando seu SKU",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Recupera um produto pelo SKU",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product SKU",
+                        "name": "sku",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.ProductResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Registra um novo usuário com nome, e-mail e senha. O e-mail deve ser único e a senha deve atender aos critérios de validação.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Cria um usuário",
+                "parameters": [
+                    {
+                        "description": "User data for registration (name, email, password)",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UserCreateDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CreateUserResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dtos.BatchResult": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "index": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "sku": {
+                    "type": "integer",
+                    "example": 12345
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
+        "dtos.CreateProductDTO": {
+            "type": "object",
+            "required": [
+                "availability",
+                "category",
+                "name",
+                "price",
+                "sku"
+            ],
+            "properties": {
+                "availability": {
+                    "type": "string",
+                    "enum": [
+                        "in stock",
+                        "out of stock"
+                    ]
+                },
+                "category": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "image_link": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dtos.CreateProductResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Product(s) created successfully"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BatchResult"
+                    }
+                }
+            }
+        },
+        "dtos.CreateUserResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "User created successfully"
+                }
+            }
+        },
+        "dtos.DeleteProductResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Product(s) deleted successfully"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BatchResult"
+                    }
+                }
+            }
+        },
+        "dtos.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "dtos.ProductResponseDTO": {
+            "type": "object",
+            "properties": {
+                "availability": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_link": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dtos.UpdateProductDTO": {
+            "type": "object",
+            "required": [
+                "sku"
+            ],
+            "properties": {
+                "availability": {
+                    "type": "string",
+                    "enum": [
+                        "in stock",
+                        "out of stock"
+                    ]
+                },
+                "category": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "image_link": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dtos.UpdateProductResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Product(s) updated successfully"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BatchResult"
+                    }
+                }
+            }
+        },
+        "dtos.UserCreateDTO": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                }
+            }
+        },
+        "dtos.UserLoginDTO": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                }
+            }
+        }
+    },
     "securityDefinitions": {
         "bearerAuth": {
             "description": "Type \"Bearer\" followed by a space and a JWT token.",

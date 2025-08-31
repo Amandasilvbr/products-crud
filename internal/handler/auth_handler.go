@@ -29,7 +29,7 @@ func NewAuthHandler(authUsecase usecase.AuthUsecaseInterface, logger *zap.Logger
 
 // Login godoc
 //
-//	@Summary		Authenticate a user
+//	@Summary		Autentica um usuário
 //	@Description	Autentica um usuário com base em e-mail e senha, retornando um token JWT válido para endpoints protegidos.
 //	@Tags			Authentication
 //	@Accept			json
@@ -73,7 +73,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // CreateUser godoc
 //
-//	@Summary		Create a new user
+//	@Summary		Cria um usuário
 //	@Description	Registra um novo usuário com nome, e-mail e senha. O e-mail deve ser único e a senha deve atender aos critérios de validação.
 //	@Tags			Authentication
 //	@Accept			json

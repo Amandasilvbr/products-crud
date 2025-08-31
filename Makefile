@@ -15,6 +15,8 @@ run:
 air-build: docs
 	@go build -o ./tmp/main cmd/api/main.go
 
+docs: cmd/api/docs/docs.go
+
 cmd/api/docs/docs.go: $(shell find internal/handler internal/server -type f)
 	@swag fmt -d ./internal/handler,./internal/server
 	@swag init --parseDependency --parseInternal -d ./cmd/api,./internal/handler,./internal/server -o ./cmd/api/docs

@@ -32,13 +32,13 @@ func NewProductHandler(useCase usecase.ProductUseCaseInterface, logger *zap.Logg
 
 // Create godoc
 //
-//	@Summary		Create one or more products
+//	@Summary		Cria um ou mais produtos
 //	@Description	Cria novos produtos com base em um único objeto ou em uma matriz de objetos no corpo da solicitação
 //	@Tags			Products
 //	@Accept			json
 //	@Produce		json
 //	@Param			products	body		[]dtos.CreateProductDTO		true	"Product data to create"
-//	@Success		201			{object}	dtos.CreateProductResponse	"Product(s) created successfully"
+//	@Success		200			{object}	dtos.CreateProductResponse	"Product(s) created successfully"
 //	@Security		bearerAuth
 //	@Router			/products [post]
 func (h *ProductHandler) Create(c *gin.Context) {
@@ -204,7 +204,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 // GetAll godoc
 //
-//	@Summary		Get all products
+//	@Summary		Recupera todos os produtos
 //	@Description	Recupera uma lista de todos os produtos do banco de dados
 //	@Tags			Products
 //	@Produce		json
@@ -245,7 +245,7 @@ func (h *ProductHandler) GetAll(c *gin.Context) {
 
 // GetBySKU godoc
 //
-//	@Summary		Get a product by SKU
+//	@Summary		Recupera um produto pelo SKU
 //	@Description	Recupera os detalhes de um único produto usando seu SKU
 //	@Tags			Products
 //	@Produce		json
@@ -292,7 +292,7 @@ func (h *ProductHandler) GetBySKU(c *gin.Context) {
 
 // Update godoc
 //
-//	@Summary		Update one or more products
+//	@Summary		Atualiza um ou mais produtos
 //	@Description	Atualiza produtos existentes com base em um único objeto ou em uma matriz de objetos no corpo da solicitação
 //	@Tags			Products
 //	@Accept			json
@@ -433,7 +433,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 
 // Delete godoc
 //
-//	@Summary		Delete one or more products
+//	@Summary		Deleta um ou mais produtos
 //	@Description	Exclui produtos do banco de dados com base em um único SKU ou em uma matriz de SKUs no corpo da solicitação
 //	@Tags			Products
 //	@Accept			json
