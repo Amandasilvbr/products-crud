@@ -28,67 +28,59 @@ func NewProductRepository(db *gorm.DB, logger *zap.Logger) repository.ProductRep
 // Create handles the creation of one or more products in the database
 // It performs validations for duplicates and existing SKUs, returning a map of any errors
 func (r *ProductRepository) Create(ctx context.Context, products []*model.Product) map[int]string {
-	if len(products) == 0 {
-		r.logger.Warn("No products provided for creation")
-		return nil
-	}
+    if len(products) == 0 {
+        r.logger.Warn("No products provided for creation")
+        return nil
+    }
 
-	// Initialize maps for tracking errors and duplicate SKUs in the input
-	errors := make(map[int]string)
-	skuSet := make(map[int]struct{})
-	for _, product := range products {
-		if _, exists := skuSet[product.SKU]; exists {
-			r.logger.Warn("Duplicate SKU in input list", zap.Int("sku", product.SKU))
-			errors[product.SKU] = fmt.Sprintf("Duplicate SKU %d in input list", product.SKU)
-		} else {
-			skuSet[product.SKU] = struct{}{}
-		}
-	}
+    errors := make(map[int]string)
+    skuSet := make(map[int]struct{})
+    for _, product := range products {
+        if _, exists := skuSet[product.SKU]; exists {
+            r.logger.Warn("Duplicate SKU in input list", zap.Int("sku", product.SKU))
+            errors[product.SKU] = fmt.Sprintf("Duplicate SKU %d in input list", product.SKU)
+        } else {
+            skuSet[product.SKU] = struct{}{}
+        }
+    }
 
-	// Iterate through products to perform database operations
-	for _, product := range products {
-		// Check if the context has been cancelled during the operation
-		if ctx.Err() != nil {
-			r.logger.Error("Context cancelled", zap.Error(ctx.Err()))
-			for _, p := range products {
-				if errors[p.SKU] == "" {
-					errors[p.SKU] = fmt.Sprintf("Operation cancelled for SKU %d: %s", p.SKU, ctx.Err().Error())
-				}
-			}
-			r.logger.Warn("Some products failed to create", zap.Any("errors", errors))
-			return errors
-		}
+    for _, product := range products {
+        // Skip products that already have errors (such as duplicate SKUs)
+        if errors[product.SKU] != "" {
+            continue
+        }
 
-		// Skip products that already have an error
-		if errors[product.SKU] != "" {
-			continue
-		}
+        // Check the context before processing the product
+        if ctx.Err() != nil {
+            r.logger.Error("Context cancelled", zap.Error(ctx.Err()))
+            errors[product.SKU] = fmt.Sprintf("Operation cancelled for SKU %d: %s", product.SKU, ctx.Err().Error())
+            continue 
+        }
 
-		// Check if a product with the same SKU already exists in the database
-		var existingProduct model.Product
-		if err := r.db.WithContext(ctx).Where("sku = ?", product.SKU).First(&existingProduct).Error; err == nil {
-			r.logger.Warn("Product with SKU already exists", zap.Int("sku", product.SKU))
-			errors[product.SKU] = fmt.Sprintf("Product with SKU %d already exists", product.SKU)
-			continue
-		} else if err != gorm.ErrRecordNotFound {
-			r.logger.Error("Error checking SKU existence", zap.Int("sku", product.SKU), zap.Error(err))
-			errors[product.SKU] = fmt.Sprintf("Error checking SKU %d: %s", product.SKU, err.Error())
-			continue
-		}
+        // Check if the SKU already exists in the database
+        var existingProduct model.Product
+        if err := r.db.WithContext(ctx).Where("sku = ?", product.SKU).First(&existingProduct).Error; err == nil {
+            r.logger.Warn("Product with SKU already exists", zap.Int("sku", product.SKU))
+            errors[product.SKU] = fmt.Sprintf("Product with SKU %d already exists", product.SKU)
+            continue
+        } else if err != gorm.ErrRecordNotFound {
+            r.logger.Error("Error checking SKU existence", zap.Int("sku", product.SKU), zap.Error(err))
+            errors[product.SKU] = fmt.Sprintf("Error checking SKU %d: %s", product.SKU, err.Error())
+            continue
+        }
 
-		// Create the new product record
-		if err := r.db.WithContext(ctx).Create(product).Error; err != nil {
-			r.logger.Error("Error creating product", zap.Int("sku", product.SKU), zap.Error(err))
-			errors[product.SKU] = fmt.Sprintf("Error creating product with SKU %d: %s", product.SKU, err.Error())
-		}
-	}
+        // Create the product
+        if err := r.db.WithContext(ctx).Create(product).Error; err != nil {
+            r.logger.Error("Error creating product", zap.Int("sku", product.SKU), zap.Error(err))
+            errors[product.SKU] = fmt.Sprintf("Error creating product with SKU %d: %s", product.SKU, err.Error())
+        }
+    }
 
-	// Return the map of errors if any occurred, otherwise return nil
-	if len(errors) > 0 {
-		r.logger.Warn("Some products failed to create", zap.Any("errors", errors))
-		return errors
-	}
-	return nil
+    if len(errors) > 0 {
+        r.logger.Warn("Some products failed to create", zap.Any("errors", errors))
+        return errors
+    }
+    return nil
 }
 
 // GetAll retrieves all products from the database

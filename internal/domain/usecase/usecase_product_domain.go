@@ -8,7 +8,7 @@ import (
 
 // ProductUseCaseInterface defines the interface for product-related use cases
 type ProductUseCaseInterface interface {
-	Create(ctx context.Context, products []*model.Product, userEmail string) map[int]string
+	Create(context.Context, []*model.Product, string) (map[int]string, map[int]string)
 	GetAll(ctx context.Context) ([]*model.Product, error)
 	GetBySKU(ctx context.Context, sku int) (*model.Product, error)
 	Update(ctx context.Context, products []*model.Product, userEmail string) map[int]string

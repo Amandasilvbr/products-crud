@@ -16,7 +16,6 @@ func JWTMiddleware(zapLogger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Retrieve the Authorization header from the request
 		authHeader := c.GetHeader("Authorization")
-		zapLogger.Debug("Authorization Header recebido", zap.String("authHeader", authHeader))
 
 		if authHeader == "" {
 			zapLogger.Debug("Missing Authorization header")

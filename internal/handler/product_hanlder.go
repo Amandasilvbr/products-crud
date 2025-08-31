@@ -42,7 +42,7 @@ func NewProductHandler(useCase usecase.ProductUseCaseInterface, logger *zap.Logg
 //	@Security		bearerAuth
 //	@Router			/products [post]
 func (h *ProductHandler) Create(c *gin.Context) {
-	// Read the raw request body to handle both single object and array of objects
+	// Ler o corpo da requisição
 	body, err := c.GetRawData()
 	if err != nil {
 		h.logger.Error("Failed to read request body", zap.Error(err))
@@ -52,10 +52,10 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 	var inputs []dtos.CreateProductDTO
 
-	// Try to unmarshal as an array of products
+	// Tentar deserializar como um array de produtos
 	err = json.Unmarshal(body, &inputs)
 	if err != nil {
-		// If it fails, try to unmarshal as a single product object
+		// Se falhar, tentar deserializar como um único produto
 		var singleInput dtos.CreateProductDTO
 		if err_single := json.Unmarshal(body, &singleInput); err_single != nil {
 			h.logger.Error("Invalid request body format", zap.Error(err_single))
@@ -65,11 +65,10 @@ func (h *ProductHandler) Create(c *gin.Context) {
 			})
 			return
 		}
-		// If successful, wrap the single object in a slice
 		inputs = []dtos.CreateProductDTO{singleInput}
 	}
 
-	// Define a struct to hold the result for each item in the batch
+	// Estrutura para armazenar o resultado de cada item no lote
 	type batchResult struct {
 		Index  int               `json:"index"`
 		Status string            `json:"status"`
@@ -78,7 +77,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	var results []batchResult
 	var products []*model.Product
 
-	// Retrieve user information from the context, set by the JWT middleware
+	// Obter informações do usuário do contexto (definidas pelo middleware JWT)
 	user, exists := c.Get("userName")
 	if !exists {
 		h.logger.Error("User not found in context")
@@ -107,7 +106,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Iterate through each input, validate it, and convert it to a domain model
+	// Iterar sobre cada entrada, validá-la e convertê-la para o modelo de domínio
 	for i, input := range inputs {
 		product := &model.Product{
 			SKU:          input.SKU,
@@ -121,7 +120,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 			CreatedBy:    userName,
 		}
 
-		// Validate the product model
+		// Validar o modelo do produto
 		if errors := h.validator.ValidateProduct(product); errors != nil {
 			h.logger.Warn("Validation errors for product", zap.Int("index", i), zap.Any("errors", errors))
 			results = append(results, batchResult{
@@ -130,16 +129,53 @@ func (h *ProductHandler) Create(c *gin.Context) {
 				Errors: errors,
 			})
 		} else {
-			// If validation succeeds, add it to the list of products to be created
 			results = append(results, batchResult{
 				Index:  i,
-				Status: "ok",
+				Status: "ok", 
 			})
 			products = append(products, product)
 		}
 	}
 
-	// Check if any item in the batch failed validation
+	// Chamar o caso de uso para criar os produtos válidos
+	var createErrors, publishErrors map[int]string
+	if len(products) > 0 {
+		createErrors, publishErrors = h.productUseCase.Create(c.Request.Context(), products, userEmailStr)
+	}
+
+	// Atualizar os resultados com base nos erros de criação e publicação
+	for i, product := range products {
+		resultIndex := -1
+		for j, result := range results {
+			if result.Index == i && result.Status == "pending" {
+				resultIndex = j
+				break
+			}
+		}
+		if resultIndex == -1 {
+			continue // Produto já inválido na validação inicial
+		}
+
+		if errMsg, exists := createErrors[product.SKU]; exists {
+			results[resultIndex].Status = "error"
+			if results[resultIndex].Errors == nil {
+				results[resultIndex].Errors = make(map[string]string)
+			}
+			results[resultIndex].Errors["creation_error"] = errMsg
+			h.logger.Error("Failed to create product", zap.Int("sku", product.SKU), zap.String("error", errMsg))
+		} else if errMsg, exists := publishErrors[product.SKU]; exists {
+			results[resultIndex].Status = "error"
+			if results[resultIndex].Errors == nil {
+				results[resultIndex].Errors = make(map[string]string)
+			}
+			results[resultIndex].Errors["publish_error"] = errMsg
+			h.logger.Error("Failed to publish product event", zap.Int("sku", product.SKU), zap.String("error", errMsg))
+		} else {
+			results[resultIndex].Status = "ok"
+		}
+	}
+
+	// Verificar se houve algum erro (validação, criação ou publicação)
 	hasErrors := false
 	for _, result := range results {
 		if result.Status == "error" {
@@ -147,39 +183,18 @@ func (h *ProductHandler) Create(c *gin.Context) {
 			break
 		}
 	}
-	// If there are validation errors, return the details
+
+	// Retornar resposta apropriada
 	if hasErrors {
-		h.logger.Warn("Validation errors found in one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation errors found in one or more products",
+		h.logger.Warn("Errors found in processing one or more products")
+		c.JSON(http.StatusMultiStatus, gin.H{
+			"message": "Some products were processed with errors",
 			"results": results,
 		})
 		return
 	}
 
-	// Call the use case to create the products
-	createErrors := h.productUseCase.Create(c.Request.Context(), products, userEmailStr)
-	if createErrors != nil {
-		// If the use case returns errors, update the results to reflect them
-		for i, product := range products {
-			if errMsg, exists := createErrors[product.SKU]; exists {
-				results[i].Status = "error"
-				if results[i].Errors == nil {
-					results[i].Errors = make(map[string]string)
-				}
-				results[i].Errors["creation_error"] = errMsg
-				h.logger.Error("Failed to create product", zap.Int("sku", product.SKU), zap.String("error", errMsg))
-			}
-		}
-		h.logger.Error("Failed to create one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Failed to create one or more products",
-			"results": results,
-		})
-		return
-	}
-
-	// Return a success response if all products were created
+	// Resposta de sucesso se todos os produtos foram criados e publicados
 	h.logger.Info("Product(s) created successfully", zap.Int("count", len(products)))
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Product(s) created successfully",
