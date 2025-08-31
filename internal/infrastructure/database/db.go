@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Amandasilvbr/products-crud/internal/config"
 	"github.com/Amandasilvbr/products-crud/internal/domain/model"
 
 	"go.uber.org/zap"
@@ -15,15 +16,26 @@ import (
 )
 
 // ConnectDB establishes a connection to the PostgreSQL database using GORM
-func ConnectDB(host, port, user, dbname, password string, zapLogger *zap.Logger) (*gorm.DB, error) {
+func ConnectDB(cfg *config.Configs, zapLogger *zap.Logger) (*gorm.DB, error) {
 	// Construct the Data Source Name (DSN) for the PostgreSQL connection
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		user,
-		password,
-		host,
-		port, 
-		dbname,
-	)
+	var dsn string
+	if cfg.AppEnv == "development" {
+		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+			cfg.DbUsername,
+			cfg.DbPassword,
+			cfg.DbHost,
+			cfg.DbPort,
+			cfg.DbDatabase,
+		)
+	} else {
+		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require",
+			cfg.DbUsername,
+			cfg.DbPassword,
+			cfg.DbHost,
+			cfg.DbPort,
+			cfg.DbDatabase,
+		)
+	}
 
 	// Open a connection to the database
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

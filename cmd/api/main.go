@@ -50,11 +50,7 @@ func main() {
 
 	// Establish a connection to the PostgreSQL database
 	db, err := database.ConnectDB(
-		cfg.DbHost,
-		cfg.DbPort,
-		cfg.DbUsername,
-		cfg.DbDatabase,
-		cfg.DbPassword,
+		cfg,
 		zapLogger,
 	)
 	if err != nil {
