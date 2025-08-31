@@ -221,7 +221,7 @@ graph TD
 </div>
 
 ## 🚀 Como Rodar o Projeto
----
+
 ### ⚙️ Desenvolvimento Local
 
 1.  **Clone o repositório**
@@ -292,82 +292,30 @@ graph TD
     ```bash
     make test
     ```
+    
+### 🧪 Testes Automatizados
 
-## 📌 Exemplos de Requests
+O projeto possui testes para garantir que os casos de uso funcionem corretamente e que a comunicação com o RabbitMQ esteja estável.  
 
-> Para todos os endpoints protegidos, lembre-se de adicionar o header `Authorization: Bearer <TOKEN>`.
+#### 🏗️ Cobertura de Testes
 
----
+- **Autenticação (AuthUsecase)**
+  - Login com sucesso usando email e senha corretos.
+  - Falha ao usar senha incorreta.
+  - Falha ao tentar logar com usuário inexistente.
+  - Uso de variáveis de ambiente simuladas (`mockEnv`) para consistência nos testes.
 
-### 1️⃣ Login (Obter JWT)
+- **Gerenciamento de Produtos (ProductUseCase)**
+  - Criação de produtos válidos.
+  - Criação de produtos com erros de validação (ex.: nome vazio).
+  - Falha na publicação de eventos no RabbitMQ.
+  - Atualização de produtos existentes e tratamento de produtos não encontrados.
+  - Exclusão de produtos e tratamento de produtos não encontrados.
+  - Recuperação de produtos via `GetAll` e `GetBySKU`.
 
-```bash
-curl -X POST https://products-crud-kh.onrender.com/auth/login \
--H "Content-Type: application/json" \
--d '{
-  "email": "user@example.com",
-  "password": "123456"
-}'
-````
-Ou para localhost:
-```bash
-  curl -X POST http://localhost:8988/api/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "123456"
-  }'
-````
-
-**Retorno:**
-
-```json
-{
-  "token": "<JWT_TOKEN>"
-}
-```
-
-### 2️⃣ Criar Produto (CREATE)
+#### ⚙️ Como Rodar os Testes
 
 ```bash
-curl -X POST [https://products-crud-kh.onrender.com/products](https://products-crud-kh.onrender.com/products) \
--H "Authorization: Bearer <TOKEN>" \
--H "Content-Type: application/json" \
--d '{
-  "name": "Smartphone X1",
-  "description": "Tela OLED 6.5\", 256GB",
-  "price": 649.99,
-  "category": "Eletrônicos"
-}'
-```
+make test
+``
 
-### 3️⃣ Listar Produtos (READ)
-
-```bash
-curl -X GET [https://products-crud-kh.onrender.com/products](https://products-crud-kh.onrender.com/products) \
--H "Authorization: Bearer <TOKEN>"
-```
-
-### 4️⃣ Atualizar Produto (UPDATE)
-
-```bash
-curl -X PUT [https://products-crud-kh.onrender.com/products/1001](https://products-crud-kh.onrender.com/products/1001) \
--H "Authorization: Bearer <TOKEN>" \
--H "Content-Type: application/json" \
--d '{
-  "name": "Smartphone X1 Pro",
-  "description": "Tela OLED 6.5\", 512GB",
-  "price": 799.99,
-  "category": "Eletrônicos"
-}'
-```
-
-### 5️⃣ Deletar Produto (DELETE)
-
-```bash
-curl -X DELETE [https://products-crud-kh.onrender.com/products/1001](https://products-crud-kh.onrender.com/products/1001) \
--H "Authorization: Bearer <TOKEN>"
-```
-
-```
-```
