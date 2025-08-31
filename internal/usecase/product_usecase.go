@@ -120,25 +120,39 @@ func (uc *ProductUseCase) Update(ctx context.Context, products []*model.Product,
 func (uc *ProductUseCase) Delete(ctx context.Context, skus []int, userEmail string) map[int]string {
 	// Store products to publish deletion events after successful deletion
 	productsToDelete := make(map[int]*model.Product)
+	errors := make(map[int]string)
+
+	// Verifica todos os SKUs e coleta produtos válidos
 	for _, sku := range skus {
 		product, err := uc.GetBySKU(ctx, sku)
 		if err != nil {
 			uc.logger.Warn("Cannot delete non-existent product", zap.Int("sku", sku), zap.Error(err))
-			return map[int]string{sku: fmt.Sprintf("Product with SKU %d not found", sku)}
+			errors[sku] = fmt.Sprintf("Product with SKU %d not found", sku)
+			continue // Continua processando os outros SKUs
 		}
 		productsToDelete[sku] = product
 	}
 
-	errors := uc.productRepo.Delete(ctx, skus)
-	if len(errors) > 0 {
-		uc.logger.Warn("Failed to delete some products", zap.Any("errors", errors), zap.Int("count", len(errors)))
-	}
+	// Deleta apenas os produtos válidos
+	if len(productsToDelete) > 0 {
+		validSKUs := make([]int, 0, len(productsToDelete))
+		for sku := range productsToDelete {
+			validSKUs = append(validSKUs, sku)
+		}
 
-	// Publish messages for successfully deleted products
-	for _, sku := range skus {
-		if _, exists := errors[sku]; !exists {
-			uc.publishToRabbitMQ(ctx, "product_deleted", productsToDelete[sku], userEmail)
-			uc.logger.Info("Published product deletion event", zap.Int("sku", sku), zap.String("user_email", userEmail))
+		// Chama o repositório para deletar os produtos válidos
+		deleteErrors := uc.productRepo.Delete(ctx, validSKUs)
+		for sku, errMsg := range deleteErrors {
+			errors[sku] = errMsg
+			uc.logger.Warn("Failed to delete product", zap.Int("sku", sku), zap.String("error", errMsg))
+		}
+
+		// Publica eventos para produtos deletados com sucesso
+		for _, sku := range validSKUs {
+			if _, exists := deleteErrors[sku]; !exists {
+				uc.publishToRabbitMQ(ctx, "product_deleted", productsToDelete[sku], userEmail)
+				uc.logger.Info("Published product deletion event", zap.Int("sku", sku), zap.String("user_email", userEmail))
+			}
 		}
 	}
 
@@ -147,6 +161,7 @@ func (uc *ProductUseCase) Delete(ctx context.Context, skus []int, userEmail stri
 		return nil
 	}
 
+	uc.logger.Warn("Some products could not be deleted", zap.Any("errors", errors), zap.Int("count", len(errors)))
 	return errors
 }
 
@@ -159,25 +174,15 @@ func (uc *ProductUseCase) publishToRabbitMQ(ctx context.Context, event string, p
 		"responsible_email": userEmail,
 	})
 	if err != nil {
-		uc.logger.Error("Failed to marshal RabbitMQ message",
-			zap.Int("sku", product.SKU),
-			zap.String("event", event),
-			zap.Error(err))
+		uc.logger.Error("Failed to marshal RabbitMQ message", zap.Int("sku", product.SKU), zap.String("event", event), zap.Error(err))
 		return
 	}
 
 	err = uc.rabbitMQ.Publish(ctx, "product_events", string(msg))
 	if err != nil {
-		uc.logger.Error("Failed to publish to RabbitMQ",
-			zap.Int("sku", product.SKU),
-			zap.String("event", event),
-			zap.String("message", string(msg)),
-			zap.Error(err))
+		uc.logger.Error("Failed to publish to RabbitMQ", zap.Int("sku", product.SKU), zap.String("event", event), zap.String("message", string(msg)), zap.Error(err))
 		return
 	}
 
-	uc.logger.Info("Successfully published to RabbitMQ",
-		zap.Int("sku", product.SKU),
-		zap.String("event", event),
-		zap.String("message", string(msg)))
+	uc.logger.Info("Successfully published to RabbitMQ", zap.Int("sku", product.SKU), zap.String("event", event), zap.String("message", string(msg)))
 }
