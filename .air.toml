@@ -1,0 +1,24 @@
+root = "."
+
+tmp_dir = "tmp"
+
+[build]
+cmd = "make air-build"
+
+bin = "tmp/main"
+
+include_dir = [""]
+
+exclude_dir = ["tmp", "vendor", "docs"]
+
+include_ext = ["go", "toml", "yaml", "env"]
+
+log = "air_build.log"
+
+delay = 1000 
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true
