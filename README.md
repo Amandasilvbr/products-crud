@@ -28,6 +28,22 @@
 ### Status do Projeto
 ![Status](https://img.shields.io/badge/Status-Ativo-brightgreen?style=for-the-badge)
 
+### Sumário
+
+* [URL de Produção](#-url-de-produção)
+* [Descrição do Projeto](#-descrição-do-projeto)
+* [Funcionalidades](#-funcionalidades)
+* [Fluxo Completo da API](#-fluxo-completo-da-api)
+* [Estrutura do Projeto](#-estrutura-do-projeto)
+* [Automação e Desenvolvimento](#️-automação-e-desenvolvimento-local)
+    * [Makefile](#makefile)
+    * [Live Reload com Air](#live-reload-com-air)
+* [Testes Automatizados](#-testes-automatizados)
+    * [Cobertura de Testes](#️-cobertura-de-testes)
+    * [Como Rodar os Testes](#️-como-rodar-os-testes)
+* [Como Rodar o Projeto](#-como-rodar-o-projeto)
+    * [Desenvolvimento Local](#️-desenvolvimento-local)
+* [Fluxo de Notificações (Emails)](#-fluxo-de-notificações-emails)
 
 ### 🌐 URL de Produção
 
@@ -40,7 +56,7 @@ Swagger disponível em: [https://products-crud-kh.onrender.com/swagger/index.htm
 
 ### 📖 Descrição do Projeto
 
-Este projeto foi desenvolvido em **Golang** com arquitetura modular e organizada em **camadas**, seguindo os princípios da **Arquitetura Limpa**:
+Este projeto foi desenvolvido em **Golang** com arquitetura limpa e organizada em **camadas**, seguindo os princípios da **Arquitetura Limpa**:
 
 - **Domain**: Modelos e regras de negócio (produto, usuário).  
 - **Usecase**: Casos de uso, lógica de aplicação.  
@@ -197,28 +213,31 @@ Ao executar o comando `make run`, o Air monitora todas as alterações nos arqui
 
 Isso elimina a necessidade de parar e iniciar o servidor manualmente a cada alteração, tornando o ciclo de desenvolvimento muito mais rápido e produtivo. As configurações específicas do Air para este projeto podem ser encontradas no arquivo `.air.toml`.
 
-### 📨 Fluxo de Notificações (Emails)
+## 🧪 Testes Automatizados
 
-A cada operação CRUD (CREATE, UPDATE, DELETE), a API publica um evento no RabbitMQ, que é consumido pelo Consumer e envia um email de notificação, seguindo o fluxograma abaixo.
-> ⚠️ Na rota register, registre um e-mail real para que o envio seja realizado. 
+O projeto possui testes para garantir que os casos de uso funcionem corretamente e que a comunicação com o RabbitMQ esteja estável.  
 
-<br>
-<br>
+#### 🏗️ Cobertura de Testes
 
-```mermaid
-graph TD
-    A[API recebe requisição CRUD] --> B(RabbitMQ: publica evento)
-    B --> C(Consumer: consome evento)
-    C --> D[Envia email de notificação]
-    D --> E[Email contém detalhes da operação]
+- **Autenticação (AuthUsecase)**
+  - Login com sucesso usando email e senha corretos.
+  - Falha ao usar senha incorreta.
+  - Falha ao tentar logar com usuário inexistente.
+  - Uso de variáveis de ambiente simuladas (`mockEnv`) para consistência nos testes.
+
+- **Gerenciamento de Produtos (ProductUseCase)**
+  - Criação de produtos válidos.
+  - Criação de produtos com erros de validação (ex.: nome vazio).
+  - Falha na publicação de eventos no RabbitMQ.
+  - Atualização de produtos existentes e tratamento de produtos não encontrados.
+  - Exclusão de produtos e tratamento de produtos não encontrados.
+  - Recuperação de produtos via `GetAll` e `GetBySKU`.
+
+#### ⚙️ Como Rodar os Testes
+
+```bash
+make test
 ```
-#### Exemplo: operação CREATE
-
-<div align="center">
-  <img src="https://i.ibb.co/xKyj8QdG/Screenshot-2025-08-31-at-15-38-35.png" 
-       alt="Exemplo de Email" 
-       width="50%">
-</div>
 
 ## 🚀 Como Rodar o Projeto
 
@@ -292,30 +311,32 @@ graph TD
     ```bash
     make test
     ```
-    
-### 🧪 Testes Automatizados
+## 📨 Fluxo de Notificações (Emails)
 
-O projeto possui testes para garantir que os casos de uso funcionem corretamente e que a comunicação com o RabbitMQ esteja estável.  
+A cada operação CRUD (CREATE, UPDATE, DELETE), a API publica um evento no RabbitMQ, que é consumido pelo Consumer e envia um email de notificação, seguindo o fluxograma abaixo.
+> ⚠️ Na rota register, registre um e-mail real para que o envio seja realizado. 
 
-#### 🏗️ Cobertura de Testes
+<br>
+<br>
 
-- **Autenticação (AuthUsecase)**
-  - Login com sucesso usando email e senha corretos.
-  - Falha ao usar senha incorreta.
-  - Falha ao tentar logar com usuário inexistente.
-  - Uso de variáveis de ambiente simuladas (`mockEnv`) para consistência nos testes.
+```mermaid
+graph TD
+    A[API recebe requisição CRUD] --> B(RabbitMQ: publica evento)
+    B --> C(Consumer: consome evento)
+    C --> D[Envia email de notificação]
+    D --> E[Email contém detalhes da operação]
+```
+#### Exemplo: operação CREATE
 
-- **Gerenciamento de Produtos (ProductUseCase)**
-  - Criação de produtos válidos.
-  - Criação de produtos com erros de validação (ex.: nome vazio).
-  - Falha na publicação de eventos no RabbitMQ.
-  - Atualização de produtos existentes e tratamento de produtos não encontrados.
-  - Exclusão de produtos e tratamento de produtos não encontrados.
-  - Recuperação de produtos via `GetAll` e `GetBySKU`.
+<div align="center">
+  <img src="https://i.ibb.co/xKyj8QdG/Screenshot-2025-08-31-at-15-38-35.png" 
+       alt="Exemplo de Email" 
+       width="50%">
+</div>
 
-#### ⚙️ Como Rodar os Testes
 
-```bash
-make test
-``
+---
 
+<p align="center">
+  Desenvolvido por <strong>Amanda Brunelli 
+</p>
