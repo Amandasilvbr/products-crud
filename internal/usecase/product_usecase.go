@@ -86,25 +86,55 @@ func (uc *ProductUseCase) GetBySKU(ctx context.Context, sku int) (*model.Product
 
 // Update handles the logic for updating existing products
 func (uc *ProductUseCase) Update(ctx context.Context, products []*model.Product, userEmail string) map[int]string {
+	// Store products to update and collect errors
+	productsToUpdate := make(map[int]*model.Product)
+	errors := make(map[int]string)
+
 	// Verify the existence of all products before attempting to update them
 	for _, product := range products {
-		_, err := uc.GetBySKU(ctx, product.SKU)
+		existingProduct, err := uc.GetBySKU(ctx, product.SKU)
 		if err != nil {
 			uc.logger.Warn("Cannot update non-existent product", zap.Int("sku", product.SKU), zap.Error(err), zap.String("operation", "update"))
-			return map[int]string{product.SKU: fmt.Sprintf("Product with SKU %d not found", product.SKU)}
+			errors[product.SKU] = fmt.Sprintf("Product with SKU %d not found", product.SKU)
+			continue 
 		}
+		// Use the existing product's metadata (e.g., CreatedAt, CreatedBy) and update only provided fields
+		updatedProduct := &model.Product{
+			SKU:          product.SKU,
+			Name:         product.Name,
+			Description:  product.Description,
+			Price:        product.Price,
+			Category:     product.Category,
+			Link:         product.Link,
+			ImageLink:    product.ImageLink,
+			Availability: product.Availability,
+			CreatedAt:    existingProduct.CreatedAt,
+			CreatedBy:    existingProduct.CreatedBy,
+			UpdatedAt:    product.UpdatedAt, 
+		}
+		productsToUpdate[product.SKU] = updatedProduct
 	}
 
-	errors := uc.productRepo.Update(ctx, products)
-	if len(errors) > 0 {
-		uc.logger.Warn("Failed to update some products", zap.Any("errors", errors), zap.Int("count", len(errors)))
-	}
+	// Update only valid products
+	if len(productsToUpdate) > 0 {
+		validProducts := make([]*model.Product, 0, len(productsToUpdate))
+		for _, product := range productsToUpdate {
+			validProducts = append(validProducts, product)
+		}
 
-	// Publish messages for successfully updated products
-	for _, product := range products {
-		if _, exists := errors[product.SKU]; !exists {
-			uc.publishToRabbitMQ(ctx, "product_updated", product, userEmail)
-			uc.logger.Info("Published product update event", zap.Int("sku", product.SKU), zap.String("user_email", userEmail))
+		// Call the repository to update the products
+		updateErrors := uc.productRepo.Update(ctx, validProducts)
+		for sku, errMsg := range updateErrors {
+			errors[sku] = errMsg
+			uc.logger.Warn("Failed to update product", zap.Int("sku", sku), zap.String("error", errMsg))
+		}
+
+		// Publish messages for successfully updated products
+		for _, product := range validProducts {
+			if _, exists := updateErrors[product.SKU]; !exists {
+				uc.publishToRabbitMQ(ctx, "product_updated", product, userEmail)
+				uc.logger.Info("Published product update event", zap.Int("sku", product.SKU), zap.String("user_email", userEmail))
+			}
 		}
 	}
 
@@ -113,6 +143,7 @@ func (uc *ProductUseCase) Update(ctx context.Context, products []*model.Product,
 		return nil
 	}
 
+	uc.logger.Warn("Some products could not be updated", zap.Any("errors", errors))
 	return errors
 }
 
