@@ -245,7 +245,7 @@ make test
 
 1.  **Clone o repositório**
     ```bash
-    git clone (https://github.com/Amandasilvbr/products-crud.git)
+    git clone https://github.com/Amandasilvbr/products-crud.git
     ```
 
 2.  **Instale as ferramentas necessárias**
@@ -292,7 +292,7 @@ make test
     ```
     Ajuste as variáveis no `.env` se necessário (ex: conexão com o Neon, credenciais do RabbitMQ).
 
-4.  **Suba os containers necessários**
+4.  **Suba os containers necessários para o rabbit e o banco de dados**
     ```bash
     make docker-run
     ```
