@@ -17,10 +17,11 @@ import (
 // ConnectDB establishes a connection to the PostgreSQL database using GORM
 func ConnectDB(host, port, user, dbname, password string, zapLogger *zap.Logger) (*gorm.DB, error) {
 	// Construct the Data Source Name (DSN) for the PostgreSQL connection
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=require",
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		user,
 		password,
 		host,
+		port, 
 		dbname,
 	)
 

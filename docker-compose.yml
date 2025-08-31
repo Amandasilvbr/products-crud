@@ -3,7 +3,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672" 
+      - "5672:5672"   
       - "15672:15672" 
     environment:
       - RABBITMQ_DEFAULT_USER=RABBIT_USER
@@ -11,5 +11,20 @@ services:
       - RABBITMQ_HOST=rabbitmq
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+
+  products-crud-postgres:
+    image: postgres:17 
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - products-crud-postgres-volume:/var/lib/postgresql/data
+    restart: always
+
 volumes:
   rabbitmq_data:
+  products-crud-postgres-volume:
