@@ -8,7 +8,6 @@ type Product struct {
 	Name string `json:"name" validate:"required,min=3,max=100"`
 	Description string `json:"description"`
 	Price float64 `json:"price" validate:"required,gt=0"`
-	Stock int `json:"stock" validate:"gte=0"`
 	Category string `json:"category" validate:"required,min=3,max=100"`
 	Link string `json:"link" validate:"omitempty,url"`
 	ImageLink string `json:"imageLink" validate:"omitempty,url"`

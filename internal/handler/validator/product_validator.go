@@ -51,8 +51,6 @@ func (v *ProductValidator) ValidateProduct(product *model.Product) map[string]st
 			errors[field] = "The price field is required and cannot be empty"
 		case "Price|gt":
 			errors[field] = fmt.Sprintf("The price must be greater than 0, got %v", value)
-		case "Stock|gte":
-			errors[field] = fmt.Sprintf("The stock must be 0 or greater, got %v", value)
 		case "Category|required":
 			errors[field] = "The category field is required and cannot be empty"
 		case "Category|max":
@@ -69,4 +67,55 @@ func (v *ProductValidator) ValidateProduct(product *model.Product) map[string]st
 	}
 	// Return the map of generated error messages
 	return errors
+}
+
+// ValidateUpdateProduct checks a Product model against a set of validation rules for updates
+func (v *ProductValidator) ValidateUpdateProduct(product *model.Product) map[string]string {
+	errors := make(map[string]string)
+
+	if product.SKU == 0 {
+		errors["SKU"] = "The SKU field is required and cannot be zero"
+	}
+	if product.Name != "" {
+		if len(product.Name) < 3 {
+			errors["Name"] = fmt.Sprintf("The name must be at least 3 characters long, got %d characters", len(product.Name))
+		} else if len(product.Name) > 100 {
+			errors["Name"] = fmt.Sprintf("The name cannot exceed 100 characters, got %d characters", len(product.Name))
+		}
+	}
+	if product.Category != "" {
+		if len(product.Category) < 3 {
+			errors["Category"] = fmt.Sprintf("The category must be at least 3 characters long, got %d characters", len(product.Category))
+		} else if len(product.Category) > 100 {
+			errors["Category"] = fmt.Sprintf("The category cannot exceed 100 characters, got %d characters", len(product.Category))
+		}
+	}
+	if product.Price != 0 {
+		if product.Price <= 0 {
+			errors["Price"] = fmt.Sprintf("The price must be greater than zero, got %v", product.Price)
+		}
+	}
+	if len(product.Description) > 500 {
+		errors["Description"] = fmt.Sprintf("The description cannot exceed 500 characters, got %d characters", len(product.Description))
+	}
+	if product.Availability != "" {
+		if product.Availability != "in stock" && product.Availability != "out of stock" {
+			errors["Availability"] = fmt.Sprintf("The availability must be one of 'in stock' or 'out of stock', got '%v'", product.Availability)
+		}
+	}
+	if product.Link != "" {
+		if err := v.validate.Var(product.Link, "url"); err != nil {
+			errors["Link"] = fmt.Sprintf("The link must be a valid URL, got '%v'", product.Link)
+		}
+	}
+	if product.ImageLink != "" {
+		if err := v.validate.Var(product.ImageLink, "url"); err != nil {
+			errors["ImageLink"] = fmt.Sprintf("The image link must be a valid URL, got '%v'", product.ImageLink)
+		}
+	}
+
+	if len(errors) > 0 {
+		return errors
+	}
+	return nil
 }

@@ -131,7 +131,7 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		} else {
 			results = append(results, batchResult{
 				Index:  i,
-				Status: "ok", 
+				Status: "ok",
 			})
 			products = append(products, product)
 		}
@@ -366,7 +366,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			Availability: input.Availability,
 		}
 
-		if errors := h.validator.ValidateProduct(product); errors != nil {
+		if errors := h.validator.ValidateUpdateProduct(product); errors != nil {
 			h.logger.Warn("Validation errors for product", zap.Int("index", i), zap.Any("errors", errors))
 			results = append(results, batchResult{
 				Index:  i,
