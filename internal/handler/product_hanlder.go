@@ -384,23 +384,6 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
-	// Return validation errors if exists
-	hasErrors := false
-	for _, result := range results {
-		if result.Status == "error" {
-			hasErrors = true
-			break
-		}
-	}
-	if hasErrors {
-		h.logger.Warn("Validation errors found in one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation errors found in one or more products",
-			"results": results,
-		})
-		return
-	}
-
 	// Call the use case to perform the update
 	updateErrors := h.productUseCase.Update(c.Request.Context(), products, userEmailStr)
 	if updateErrors != nil {
@@ -418,6 +401,32 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		h.logger.Error("Failed to update one or more products")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Failed to update one or more products",
+			"results": results,
+		})
+		return
+	}
+
+		// Return validation errors if exists
+	hasErrors := false
+	for _, result := range results {
+		if result.Status == "error" {
+			hasErrors = true
+			break
+		}
+	}
+	if hasErrors {
+		h.logger.Warn("Validation errors found in one or more products")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation errors found in one or more products",
+			"results": results,
+		})
+		return
+	}
+
+	if hasErrors {
+		h.logger.Warn("Validation errors found in one or more products")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation errors found in one or more products",
 			"results": results,
 		})
 		return
