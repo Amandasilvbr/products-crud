@@ -15,8 +15,6 @@ run:
 air-build: docs
 	@go build -o ./tmp/main cmd/api/main.go
 
-docs: cmd/api/docs/docs.go
-
 cmd/api/docs/docs.go: $(shell find internal/handler internal/server -type f)
 	@swag fmt -d ./internal/handler,./internal/server
 	@swag init --parseDependency --parseInternal -d ./cmd/api,./internal/handler,./internal/server -o ./cmd/api/docs
@@ -35,7 +33,6 @@ install-tools:
 	@go get -u gorm.io/gorm
 	@go get -u gorm.io/driver/postgres
 	@go get -u github.com/joho/godotenv
-# 	@go get gorm.io/datatypes
 	@go get github.com/go-playground/validator/v10
 	@go get github.com/dgrijalva/jwt-go
 	@go get -u go.uber.org/zap
@@ -52,7 +49,7 @@ install-tools:
 
 test:
 	@echo "Running tests..."
-	@go test ./tests/... -v
+	@go test ./internal/usecase/tests/... -v
 
 clean:
 	@echo "Cleaning..."

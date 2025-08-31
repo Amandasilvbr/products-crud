@@ -34,7 +34,7 @@ func New() (*Configs, error) {
 	if err := godotenv.Load(".env"); err == nil {
 		fmt.Println("Arquivo .env carregado")
 	} else {
-		fmt.Println("Nenhum .env encontrado, usando variáveis do ambiente")
+		fmt.Println("No .env file found, using environment variables")
 	}
 
 	var errorList []error
