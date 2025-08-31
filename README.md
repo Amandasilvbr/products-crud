@@ -1,39 +1,42 @@
-
-![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-![Makefile](https://img.shields.io/badge/Makefile-429800?style=for-the-badge&logo=gnu-make&logoColor=white)
-![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
-![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
-![Gin](https://img.shields.io/badge/Gin-009485?style=for-the-badge&logo=gin&logoColor=white)
-![GORM](https://img.shields.io/badge/GORM-AF1921?style=for-the-badge)
-![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
-![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
-![Zap](https://img.shields.io/badge/Zap%20Logger-7B00FF?style=for-the-badge)
-![Validator v10](https://img.shields.io/badge/Validator%20v10-4CAF50?style=for-the-badge)
-
-![Status](https://img.shields.io/badge/Status-Ativo-brightgreen?style=for-the-badge)
-
-
 # Products CRUD API com RabbitMQ, JWT e Notificações por Email
 
 
 > API de CRUD de produtos com autenticação via JWT, filas RabbitMQ e envio de notificações por email a cada operação realizada.
 > Segue **Arquitetura Limpa (Clean Architecture)**, separando camadas de domínio, caso de uso, infraestrutura e interface.
 
----
+### Linguagem e Ferramentas Principais
+![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+![Makefile](https://img.shields.io/badge/Makefile-429800?style=for-the-badge&logo=gnu-make&logoColor=white)
+
+### Frameworks e Bibliotecas
+![Gin](https://img.shields.io/badge/Gin-009485?style=for-the-badge&logo=gin&logoColor=white)
+![GORM](https://img.shields.io/badge/GORM-AF1921?style=for-the-badge)
+![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
+![Zap](https://img.shields.io/badge/Zap%20Logger-7B00FF?style=for-the-badge)
+![Validator v10](https://img.shields.io/badge/Validator%20v10-4CAF50?style=for-the-badge)
+
+### Infraestrutura e Banco de Dados
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
+
+### Plataformas e Documentação
+![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)
+![Neon](https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=black)
+![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)
+
+### Status do Projeto
+![Status](https://img.shields.io/badge/Status-Ativo-brightgreen?style=for-the-badge)
+
 
 ### 🌐 URL de Produção
 
 A API está disponível em produção no Render: [https://products-crud-kh.onrender.com](https://products-crud-kh.onrender.com)  
 
-> A URL principal não retorna conteúdo, serve apenas para expor as rotas.  
+> ⚠️ A URL principal não retorna conteúdo, serve apenas para expor as rotas.  
 
 Swagger disponível em: [https://products-crud-kh.onrender.com/swagger/index.html](https://products-crud-kh.onrender.com/swagger/index.html)
 
----
 
 ### 📖 Descrição do Projeto
 
@@ -44,7 +47,7 @@ Este projeto foi desenvolvido em **Golang** com arquitetura modular e organizada
 - **Handler / API**: Camada de interface, endpoints HTTP com Gin.  
 - **Infrastructure**: Banco de dados (Neon/PostgreSQL), RabbitMQ, envio de emails, logging.  
 
-### Funcionalidades
+### ⚡ Funcionalidades
 
 #### CRUD de Produtos
 - Criar, ler, atualizar e deletar produtos.
@@ -67,7 +70,41 @@ Este projeto foi desenvolvido em **Golang** com arquitetura modular e organizada
 
 ---
 
-#### Estrutura do Projeto
+### 🔄 Fluxo Completo da API
+
+```mermaid
+flowchart TD
+    %% Seção Autenticação
+    subgraph Auth [Autenticação]
+        direction TB
+        A1[Registrar Usuário] -->|POST /api/register| A2[Usuário Criado]
+        A2 --> A3[Login] 
+        A3 -->|POST /api/login| A4[Recebe JWT Token]
+        A4 --> A5[Token usado nas requisições protegidas]
+    end
+
+    %% Seção CRUD de Produtos
+    subgraph Products [CRUD de Produtos]
+        direction TB
+        A5 --> B1[Criar Produto] -->|POST /products| B2[Produto Criado]
+        A5 --> B3[Listar Produtos] -->|GET /products| B4[Produtos Retornados]
+        A5 --> B5[Atualizar Produto] -->|PUT /products/:id| B6[Produto Atualizado]
+        A5 --> B7[Deletar Produto] -->|DELETE /products/:id| B8[Produto Removido]
+    end
+
+    %% Seção Notificações
+    subgraph Notifications [Notificações por Email]
+        direction TB
+        B2 --> C1[Publica evento no RabbitMQ]
+        B6 --> C1
+        B8 --> C1
+        C1 --> C2[Consumer consome evento]
+        C2 --> C3[Envia email de notificação]
+    end
+```
+> ⚠️ Todas as rotas foram projetadas para aceitar apenas um produto ou um batch de produtos. Qualquer erro de validação em um único produto não impedirá os demais de serem criados/atualizados/deletados.
+
+### 📂  Estrutura do Projeto
 
 ```text
 .
@@ -134,9 +171,7 @@ Este projeto foi desenvolvido em **Golang** com arquitetura modular e organizada
 ├── .env
 ```
 
----
-
-## Automação e Desenvolvimento Local
+## ⚙️ Automação e Desenvolvimento Local
 
 Para otimizar o fluxo de trabalho, o projeto conta com ferramentas de automação para tarefas comuns e live reload durante o desenvolvimento.
 
@@ -164,15 +199,19 @@ Isso elimina a necessidade de parar e iniciar o servidor manualmente a cada alte
 
 ### 📨 Fluxo de Notificações (Emails)
 
-A cada operação CRUD (CREATE, UPDATE, DELETE), a API publica um evento no RabbitMQ, que é consumido pelo Consumer e envia um email de notificação.
-<br>
-<br>
-<div align="center">
-  <img src="https://i.ibb.co/qM3RRhBW/Screenshot-2025-08-31-at-15-30-27-removebg-preview.png" 
-       alt="Exemplo de Email" 
-       width="50%">
-</div>
+A cada operação CRUD (CREATE, UPDATE, DELETE), a API publica um evento no RabbitMQ, que é consumido pelo Consumer e envia um email de notificação, seguindo o fluxograma abaixo.
+> ⚠️ Na rota register, registre um e-mail real para que o envio seja realizado. 
 
+<br>
+<br>
+
+```mermaid
+graph TD
+    A[API recebe requisição CRUD] --> B(RabbitMQ: publica evento)
+    B --> C(Consumer: consome evento)
+    C --> D[Envia email de notificação]
+    D --> E[Email contém detalhes da operação]
+```
 #### Exemplo: operação CREATE
 
 <div align="center">
@@ -180,3 +219,155 @@ A cada operação CRUD (CREATE, UPDATE, DELETE), a API publica um evento no Rabb
        alt="Exemplo de Email" 
        width="50%">
 </div>
+
+## 🚀 Como Rodar o Projeto
+---
+### ⚙️ Desenvolvimento Local
+
+1.  **Clone o repositório**
+    ```bash
+    git clone (https://github.com/Amandasilvbr/products-crud.git)
+    ```
+
+2.  **Instale as ferramentas necessárias**
+    ```bash
+    make install-tools
+    ```
+
+3.  **Configure variáveis de ambiente**
+    Copie o arquivo de ambiente de desenvolvimento e substitua:
+    ```bash
+    # DB development credentials
+    DB_DATABASE=<DB_DATABASE>
+    DB_HOST=<DB_HOST>
+    DB_PORT=<DB_PORT>
+    DB_USERNAME=<DB_USERNAME>
+    DB_PASSWORD=<DB_PASSWORD>
+    
+    # Base API URL
+    API_URL=<API_URL>
+    
+    # Determines the application's running environment (e.g., development, production)
+    APP_ENV=<APP_ENV>
+    
+    # A secret key used for signing and verifying JSON Web Tokens (JWT)
+    JWT_SECRET_KEY=<JWT_SECRET_KEY>
+    
+    # The url for connecting to the RabbitMQ message broker
+    RABBITMQ_URL=<RABBITMQ_URL>
+    
+    # The hostname of the SMTP server used for sending emails
+    SMTP_HOST=<SMTP_HOST>
+    
+    # The port number for the SMTP server
+    SMTP_PORT=<SMTP_PORT>
+    
+    # The username for authenticating with the SMTP server
+    SMTP_USER=<SMTP_USER>
+    
+    # The password for the SMTP user
+    SMTP_PASSWORD=<SMTP_PASSWORD>
+    
+    # The email address that will appear as the sender ('From' field) in emails
+    SMTP_FROM=<SMTP_FROM>
+    ```
+    Ajuste as variáveis no `.env` se necessário (ex: conexão com o Neon, credenciais do RabbitMQ).
+
+4.  **Suba os containers necessários**
+    ```bash
+    make docker-run
+    ```
+    Isso iniciará o RabbitMQ e outros serviços que a API depende.
+
+5.  **Compile e execute a API com live reload**
+    ```bash
+    air
+    ```
+
+6.  **Acesse a API e Swagger**
+    - **API**: `http://localhost:8988`
+    - **Swagger**: `http://localhost:8988/swagger/index.html`
+
+7.  **Rodar os testes**
+    ```bash
+    make test
+    ```
+
+## 📌 Exemplos de Requests
+
+> Para todos os endpoints protegidos, lembre-se de adicionar o header `Authorization: Bearer <TOKEN>`.
+
+---
+
+### 1️⃣ Login (Obter JWT)
+
+```bash
+curl -X POST https://products-crud-kh.onrender.com/auth/login \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "user@example.com",
+  "password": "123456"
+}'
+````
+Ou para localhost:
+```bash
+  curl -X POST http://localhost:8988/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "123456"
+  }'
+````
+
+**Retorno:**
+
+```json
+{
+  "token": "<JWT_TOKEN>"
+}
+```
+
+### 2️⃣ Criar Produto (CREATE)
+
+```bash
+curl -X POST [https://products-crud-kh.onrender.com/products](https://products-crud-kh.onrender.com/products) \
+-H "Authorization: Bearer <TOKEN>" \
+-H "Content-Type: application/json" \
+-d '{
+  "name": "Smartphone X1",
+  "description": "Tela OLED 6.5\", 256GB",
+  "price": 649.99,
+  "category": "Eletrônicos"
+}'
+```
+
+### 3️⃣ Listar Produtos (READ)
+
+```bash
+curl -X GET [https://products-crud-kh.onrender.com/products](https://products-crud-kh.onrender.com/products) \
+-H "Authorization: Bearer <TOKEN>"
+```
+
+### 4️⃣ Atualizar Produto (UPDATE)
+
+```bash
+curl -X PUT [https://products-crud-kh.onrender.com/products/1001](https://products-crud-kh.onrender.com/products/1001) \
+-H "Authorization: Bearer <TOKEN>" \
+-H "Content-Type: application/json" \
+-d '{
+  "name": "Smartphone X1 Pro",
+  "description": "Tela OLED 6.5\", 512GB",
+  "price": 799.99,
+  "category": "Eletrônicos"
+}'
+```
+
+### 5️⃣ Deletar Produto (DELETE)
+
+```bash
+curl -X DELETE [https://products-crud-kh.onrender.com/products/1001](https://products-crud-kh.onrender.com/products/1001) \
+-H "Authorization: Bearer <TOKEN>"
+```
+
+```
+```
