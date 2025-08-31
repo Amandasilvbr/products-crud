@@ -1,0 +1,353 @@
+basePath: /api
+definitions:
+  dtos.BatchResult:
+    properties:
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      index:
+        example: 0
+        type: integer
+      sku:
+        example: 12345
+        type: integer
+      status:
+        example: ok
+        type: string
+    type: object
+  dtos.CreateProductDTO:
+    properties:
+      availability:
+        enum:
+        - in stock
+        - out of stock
+        type: string
+      category:
+        maxLength: 100
+        minLength: 3
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      image_link:
+        type: string
+      link:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      price:
+        type: number
+      sku:
+        type: integer
+    required:
+    - availability
+    - category
+    - name
+    - price
+    - sku
+    type: object
+  dtos.CreateProductResponse:
+    properties:
+      message:
+        example: Product(s) created successfully
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/dtos.BatchResult'
+        type: array
+    type: object
+  dtos.CreateUserResponse:
+    properties:
+      message:
+        example: User created successfully
+        type: string
+    type: object
+  dtos.DeleteProductResponse:
+    properties:
+      message:
+        example: Product(s) deleted successfully
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/dtos.BatchResult'
+        type: array
+    type: object
+  dtos.LoginResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  dtos.ProductResponseDTO:
+    properties:
+      availability:
+        type: string
+      category:
+        type: string
+      created_at:
+        type: string
+      createdBy:
+        type: string
+      description:
+        type: string
+      image_link:
+        type: string
+      link:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      sku:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  dtos.UpdateProductDTO:
+    properties:
+      availability:
+        enum:
+        - in stock
+        - out of stock
+        type: string
+      category:
+        maxLength: 100
+        minLength: 3
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      image_link:
+        type: string
+      link:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      price:
+        type: number
+      sku:
+        type: integer
+    required:
+    - sku
+    type: object
+  dtos.UpdateProductResponse:
+    properties:
+      message:
+        example: Product(s) updated successfully
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/dtos.BatchResult'
+        type: array
+    type: object
+  dtos.UserCreateDTO:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  dtos.UserLoginDTO:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+info:
+  contact: {}
+  description: API desenvolvida para oferecer funcionalidades de criação, consulta,
+    atualização e exclusão de produtos, com alertas via e-mail utilizando RabbitMQ.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Products CRUD API
+  version: "1.0"
+paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Autentica um usuário com base em e-mail e senha, retornando um
+        token JWT válido para endpoints protegidos.
+      parameters:
+      - description: User credentials (email and password)
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UserLoginDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful authentication with JWT token
+          schema:
+            $ref: '#/definitions/dtos.LoginResponse'
+      summary: Authenticate a user
+      tags:
+      - Authentication
+  /products:
+    delete:
+      consumes:
+      - application/json
+      description: Exclui produtos do banco de dados com base em um único SKU ou em
+        uma matriz de SKUs no corpo da solicitação
+      parameters:
+      - description: SKUs of products to delete
+        in: body
+        name: skus
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product(s) deleted successfully
+          schema:
+            $ref: '#/definitions/dtos.DeleteProductResponse'
+      security:
+      - bearerAuth: []
+      summary: Delete one or more products
+      tags:
+      - Products
+    get:
+      description: Recupera uma lista de todos os produtos do banco de dados
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Products retrieved successfully
+          schema:
+            items:
+              $ref: '#/definitions/dtos.ProductResponseDTO'
+            type: array
+      security:
+      - bearerAuth: []
+      summary: Get all products
+      tags:
+      - Products
+    post:
+      consumes:
+      - application/json
+      description: Cria novos produtos com base em um único objeto ou em uma matriz
+        de objetos no corpo da solicitação
+      parameters:
+      - description: Product data to create
+        in: body
+        name: products
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dtos.CreateProductDTO'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Product(s) created successfully
+          schema:
+            $ref: '#/definitions/dtos.CreateProductResponse'
+      security:
+      - bearerAuth: []
+      summary: Create one or more products
+      tags:
+      - Products
+    put:
+      consumes:
+      - application/json
+      description: Atualiza produtos existentes com base em um único objeto ou em
+        uma matriz de objetos no corpo da solicitação
+      parameters:
+      - description: Product data to update
+        in: body
+        name: products
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dtos.UpdateProductDTO'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product(s) updated successfully
+          schema:
+            $ref: '#/definitions/dtos.UpdateProductResponse'
+      security:
+      - bearerAuth: []
+      summary: Update one or more products
+      tags:
+      - Products
+  /products/{sku}:
+    get:
+      description: Recupera os detalhes de um único produto usando seu SKU
+      parameters:
+      - description: Product SKU
+        in: path
+        name: sku
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product retrieved successfully
+          schema:
+            $ref: '#/definitions/dtos.ProductResponseDTO'
+      security:
+      - bearerAuth: []
+      summary: Get a product by SKU
+      tags:
+      - Products
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Registra um novo usuário com nome, e-mail e senha. O e-mail deve
+        ser único e a senha deve atender aos critérios de validação.
+      parameters:
+      - description: User data for registration (name, email, password)
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UserCreateDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/dtos.CreateUserResponse'
+      summary: Create a new user
+      tags:
+      - Authentication
+securityDefinitions:
+  bearerAuth:
+    description: Type "Bearer" followed by a space and a JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
