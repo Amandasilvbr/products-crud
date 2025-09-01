@@ -28,11 +28,10 @@ func ConnectDB(cfg *config.Configs, zapLogger *zap.Logger) (*gorm.DB, error) {
 			cfg.DbDatabase,
 		)
 	} else {
-		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require",
+		dsn = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=require",
 			cfg.DbUsername,
 			cfg.DbPassword,
 			cfg.DbHost,
-			cfg.DbPort,
 			cfg.DbDatabase,
 		)
 	}

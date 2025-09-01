@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Amandasilvbr/products-crud/internal/domain/model"
 	"github.com/Amandasilvbr/products-crud/internal/domain/usecase"
@@ -30,6 +31,13 @@ func NewProductHandler(useCase usecase.ProductUseCaseInterface, logger *zap.Logg
 	}
 }
 
+type batchResult struct {
+	Index  int               `json:"index"`
+	SKU    int               `json:"sku"`
+	Status string            `json:"status"`
+	Errors map[string]string `json:"errors,omitempty"`
+}
+
 // Create godoc
 //
 //	@Summary		Cria um ou mais produtos
@@ -42,71 +50,47 @@ func NewProductHandler(useCase usecase.ProductUseCaseInterface, logger *zap.Logg
 //	@Security		bearerAuth
 //	@Router			/products [post]
 func (h *ProductHandler) Create(c *gin.Context) {
-	// Ler o corpo da requisição
-	body, err := c.GetRawData()
+	// Lê o corpo da requisição
+	body, err := h.readRequestBody(c)
 	if err != nil {
-		h.logger.Error("Failed to read request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
 
 	var inputs []dtos.CreateProductDTO
-
-	// Tentar deserializar como um array de produtos
-	err = json.Unmarshal(body, &inputs)
-	if err != nil {
-		// Se falhar, tentar deserializar como um único produto
+	if err := json.Unmarshal(body, &inputs); err != nil {
 		var singleInput dtos.CreateProductDTO
-		if err_single := json.Unmarshal(body, &singleInput); err_single != nil {
-			h.logger.Error("Invalid request body format", zap.Error(err_single))
+		if errSingle := json.Unmarshal(body, &singleInput); errSingle != nil {
+			h.logger.Error("Invalid request body format", zap.Error(errSingle))
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid request body format. Must be a product object or an array of product objects.",
-				"details": err_single.Error(),
+				"details": errSingle.Error(),
 			})
 			return
 		}
 		inputs = []dtos.CreateProductDTO{singleInput}
 	}
 
-	// Estrutura para armazenar o resultado de cada item no lote
-	type batchResult struct {
-		Index  int               `json:"index"`
-		Status string            `json:"status"`
-		Errors map[string]string `json:"errors,omitempty"`
-	}
 	var results []batchResult
 	var products []*model.Product
 
-	// Obter informações do usuário do contexto (definidas pelo middleware JWT)
-	user, exists := c.Get("userName")
-	if !exists {
+	// Obtém informações do usuário
+	userNameVal, ok := c.Get("userName")
+	if !ok {
 		h.logger.Error("User not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
+	userName, _ := userNameVal.(string)
 
-	userName, ok := user.(string)
+	userEmailVal, ok := c.Get("userEmail")
 	if !ok {
-		h.logger.Error("Invalid user format in context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user data"})
-		return
-	}
-
-	userEmail, exists := c.Get("userEmail")
-	if !exists {
 		h.logger.Error("User email not found in context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User email not found"})
 		return
 	}
+	userEmail, _ := userEmailVal.(string)
 
-	userEmailStr, ok := userEmail.(string)
-	if !ok {
-		h.logger.Error("Invalid user email format in context")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user email data"})
-		return
-	}
-
-	// Iterar sobre cada entrada, validá-la e convertê-la para o modelo de domínio
+	// Validate and prepare products
 	for i, input := range inputs {
 		product := &model.Product{
 			SKU:          input.SKU,
@@ -120,44 +104,47 @@ func (h *ProductHandler) Create(c *gin.Context) {
 			CreatedBy:    userName,
 		}
 
-		// Validar o modelo do produto
-		if errors := h.validator.ValidateProduct(product); errors != nil {
-			h.logger.Warn("Validation errors for product", zap.Int("index", i), zap.Any("errors", errors))
+		if errs := h.validator.ValidateProduct(product); errs != nil {
+			h.logger.Warn("Validation errors for product", zap.Int("index", i), zap.Any("errors", errs))
 			results = append(results, batchResult{
 				Index:  i,
 				Status: "error",
-				Errors: errors,
+				Errors: errs,
 			})
 		} else {
 			results = append(results, batchResult{
 				Index:  i,
-				Status: "ok",
+				Status: "pending",
 			})
 			products = append(products, product)
 		}
 	}
 
-	// Chamar o caso de uso para criar os produtos válidos
+	// Create products
 	var createErrors, publishErrors map[int]string
 	if len(products) > 0 {
-		createErrors, publishErrors = h.productUseCase.Create(c.Request.Context(), products, userEmailStr)
+		createErrors, publishErrors = h.productUseCase.Create(c.Request.Context(), products, userEmail)
 	}
 
-	// Atualizar os resultados com base nos erros de criação e publicação
+	// Refresh results
 	for i, product := range products {
 		resultIndex := -1
-		for j, result := range results {
-			if result.Index == i && result.Status == "pending" {
+		for j, r := range results {
+			if r.Index == i && r.Status == "pending" {
 				resultIndex = j
 				break
 			}
 		}
 		if resultIndex == -1 {
-			continue // Produto já inválido na validação inicial
+			continue
 		}
 
 		if errMsg, exists := createErrors[product.SKU]; exists {
-			results[resultIndex].Status = "error"
+			if strings.Contains(errMsg, "already exists") {
+				results[resultIndex].Status = "conflict"
+			} else {
+				results[resultIndex].Status = "error"
+			}
 			if results[resultIndex].Errors == nil {
 				results[resultIndex].Errors = make(map[string]string)
 			}
@@ -175,29 +162,12 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		}
 	}
 
-	// Verificar se houve algum erro (validação, criação ou publicação)
-	hasErrors := false
-	for _, result := range results {
-		if result.Status == "error" {
-			hasErrors = true
-			break
-		}
-	}
+	// Calls the helper to determinate the final status HTTP
+	status := determineHTTPStatus(results)
 
-	// Retornar resposta apropriada
-	if hasErrors {
-		h.logger.Warn("Errors found in processing one or more products")
-		c.JSON(http.StatusMultiStatus, gin.H{
-			"message": "Some products were processed with errors",
-			"results": results,
-		})
-		return
-	}
-
-	// Resposta de sucesso se todos os produtos foram criados e publicados
-	h.logger.Info("Product(s) created successfully", zap.Int("count", len(products)))
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Product(s) created successfully",
+	h.logger.Info("Batch processed", zap.Int("http_status", status))
+	c.JSON(status, gin.H{
+		"message": "Batch processed",
 		"results": results,
 	})
 }
@@ -303,57 +273,47 @@ func (h *ProductHandler) GetBySKU(c *gin.Context) {
 //	@Router			/products [put]
 func (h *ProductHandler) Update(c *gin.Context) {
 	// Read the raw request body to handle both single and multiple updates
-	body, err := c.GetRawData()
+	body, err := h.readRequestBody(c)
 	if err != nil {
-		h.logger.Error("Failed to read request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
 
-	// Try to unmarshal as an array of update objects
+	// Try to unmarshal the request body into an array of UpdateProductDTO
 	var inputs []dtos.UpdateProductDTO
-	err = json.Unmarshal(body, &inputs)
-	if err != nil {
-		// Try to unmarshal as a single update object
+	if err := json.Unmarshal(body, &inputs); err != nil {
+		// If unmarshalling as an array fails, try to unmarshal as a single object
 		var singleInput dtos.UpdateProductDTO
-		if err_single := json.Unmarshal(body, &singleInput); err_single != nil {
-			h.logger.Error("Invalid request body format", zap.Error(err_single))
+		if errSingle := json.Unmarshal(body, &singleInput); errSingle != nil {
+			// Log error and return 400 if the body format is invalid
+			h.logger.Error("Invalid request body format", zap.Error(errSingle))
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid request body format. Must be a product object or an array of product objects.",
-				"details": err_single.Error(),
+				"details": errSingle.Error(),
 			})
 			return
 		}
-		// Wrap the single object in a slice
+		// Wrap the single object in a slice to unify processing
 		inputs = []dtos.UpdateProductDTO{singleInput}
 	}
 
-	// Define a struct for batch operation results
-	type batchResult struct {
-		Index  int               `json:"index"`
-		SKU    int               `json:"sku"`
-		Status string            `json:"status"`
-		Errors map[string]string `json:"errors,omitempty"`
-	}
-	var results []batchResult
-	var products []*model.Product
-
-	// Retrieve the user email from the context
-	userEmail, exists := c.Get("userEmail")
+	// Retrieve user email from the context
+	userEmailVal, exists := c.Get("userEmail")
 	if !exists {
 		h.logger.Error("User email not found in context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User email not found"})
 		return
 	}
-
-	userEmailStr, ok := userEmail.(string)
+	userEmail, ok := userEmailVal.(string)
 	if !ok {
 		h.logger.Error("Invalid user email format in context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user email data"})
 		return
 	}
 
-	// Validate and process each item in the update request
+	var results []batchResult     
+	var products []*model.Product 
+
+	// Loop through each input and validate it
 	for i, input := range inputs {
 		product := &model.Product{
 			SKU:          input.Sku,
@@ -366,15 +326,17 @@ func (h *ProductHandler) Update(c *gin.Context) {
 			Availability: input.Availability,
 		}
 
-		if errors := h.validator.ValidateUpdateProduct(product); errors != nil {
-			h.logger.Warn("Validation errors for product", zap.Int("index", i), zap.Any("errors", errors))
+		// Validate the product
+		if errs := h.validator.ValidateUpdateProduct(product); errs != nil {
+			// If validation fails, mark result as error with details
 			results = append(results, batchResult{
 				Index:  i,
 				SKU:    product.SKU,
 				Status: "error",
-				Errors: errors,
+				Errors: errs,
 			})
 		} else {
+			// If validation passes, mark result as ok and add to products list
 			results = append(results, batchResult{
 				Index:  i,
 				SKU:    product.SKU,
@@ -384,58 +346,28 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 	}
 
-	// Call the use case to perform the update
-	updateErrors := h.productUseCase.Update(c.Request.Context(), products, userEmailStr)
-	if updateErrors != nil {
-		// If the use case returns errors, update the results
-		for i, product := range products {
-			if errMsg, exists := updateErrors[product.SKU]; exists {
-				results[i].Status = "error"
-				if results[i].Errors == nil {
-					results[i].Errors = make(map[string]string)
-				}
-				results[i].Errors["update_error"] = errMsg
-				h.logger.Error("Failed to update product", zap.Int("sku", product.SKU), zap.String("error", errMsg))
+	// Call the use case to perform the actual update in the database
+	updateErrors := h.productUseCase.Update(c.Request.Context(), products, userEmail)
+
+	// If the use case returned errors, update the results accordingly
+	for i, product := range products {
+		if errMsg, exists := updateErrors[product.SKU]; exists {
+			results[i].Status = "error"
+			if results[i].Errors == nil {
+				results[i].Errors = make(map[string]string)
 			}
-		}
-		h.logger.Error("Failed to update one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Failed to update one or more products",
-			"results": results,
-		})
-		return
-	}
-
-		// Return validation errors if exists
-	hasErrors := false
-	for _, result := range results {
-		if result.Status == "error" {
-			hasErrors = true
-			break
+			results[i].Errors["update_error"] = errMsg
+			h.logger.Error("Failed to update product", zap.Int("sku", product.SKU), zap.String("error", errMsg))
 		}
 	}
-	if hasErrors {
-		h.logger.Warn("Validation errors found in one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation errors found in one or more products",
-			"results": results,
-		})
-		return
-	}
 
-	if hasErrors {
-		h.logger.Warn("Validation errors found in one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Validation errors found in one or more products",
-			"results": results,
-		})
-		return
-	}
+	// Determine the final HTTP status based on the results
+	status := determineHTTPStatus(results)
 
-	// Return a success response
-	h.logger.Info("Product(s) updated successfully", zap.Int("count", len(products)))
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Product(s) updated successfully",
+	// Log the processing result and send the response
+	h.logger.Info("Products processed in updating", zap.Int("count", len(products)))
+	c.JSON(status, gin.H{
+		"message": "Products processed",
 		"results": results,
 	})
 }
@@ -453,49 +385,37 @@ func (h *ProductHandler) Update(c *gin.Context) {
 //	@Router			/products [delete]
 func (h *ProductHandler) Delete(c *gin.Context) {
 	// Read the raw request body to handle both single and multiple SKUs
-	body, err := c.GetRawData()
+	body, err := h.readRequestBody(c)
 	if err != nil {
-		h.logger.Error("Failed to read request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
 
 	// Try to unmarshal as an array of SKUs
 	var skus []int
-	err = json.Unmarshal(body, &skus)
-	if err != nil {
+	if err := json.Unmarshal(body, &skus); err != nil {
 		// Try to unmarshal as a single SKU
 		var singleSKU int
-		if err_single := json.Unmarshal(body, &singleSKU); err_single != nil {
-			h.logger.Error("Invalid request body format", zap.Error(err_single))
+		if errSingle := json.Unmarshal(body, &singleSKU); errSingle != nil {
+			h.logger.Error("Invalid request body format", zap.Error(errSingle))
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid request body format. Must be a SKU or an array of SKUs.",
-				"details": err_single.Error(),
+				"details": errSingle.Error(),
 			})
 			return
 		}
-		// Wrap the single SKU in a slice
 		skus = []int{singleSKU}
 	}
 
-	// Define a struct for batch results
-	type batchResult struct {
-		Index  int               `json:"index"`
-		SKU    int               `json:"sku"`
-		Status string            `json:"status"`
-		Errors map[string]string `json:"errors,omitempty"`
-	}
 	var results []batchResult
 
 	// Get user email from context
-	userEmail, exists := c.Get("userEmail")
+	userEmailVal, exists := c.Get("userEmail")
 	if !exists {
 		h.logger.Error("User email not found in context", zap.String("operation", "delete"))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User email not found"})
 		return
 	}
-
-	userEmailStr, ok := userEmail.(string)
+	userEmail, ok := userEmailVal.(string)
 	if !ok {
 		h.logger.Error("Invalid user email format in context", zap.String("operation", "delete"))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user email data"})
@@ -512,31 +432,55 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 	}
 
 	// Call the use case to perform the deletion
-	deleteErrors := h.productUseCase.Delete(c.Request.Context(), skus, userEmailStr)
-	if deleteErrors != nil {
-		// If the use case returns errors, update the results
-		for i, sku := range skus {
-			if errMsg, exists := deleteErrors[sku]; exists {
-				results[i].Status = "error"
-				if results[i].Errors == nil {
-					results[i].Errors = make(map[string]string)
-				}
-				results[i].Errors["delete_error"] = errMsg
-				h.logger.Error("Failed to delete product", zap.Int("sku", sku), zap.String("error", errMsg))
+	deleteErrors := h.productUseCase.Delete(c.Request.Context(), skus, userEmail)
+	for i, sku := range skus {
+		if errMsg, exists := deleteErrors[sku]; exists {
+			results[i].Status = "error"
+			if results[i].Errors == nil {
+				results[i].Errors = make(map[string]string)
 			}
+			results[i].Errors["delete_error"] = errMsg
+			h.logger.Error("Failed to delete product", zap.Int("sku", sku), zap.String("error", errMsg))
 		}
-		h.logger.Error("Failed to delete one or more products")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "Failed to delete one or more products",
-			"results": results,
-		})
-		return
 	}
 
-	// Return a success response
-	h.logger.Info("Product(s) deleted successfully", zap.Int("count", len(skus)))
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Product(s) deleted successfully",
+	// Determine final HTTP status using the helper
+	status := determineHTTPStatus(results)
+
+	h.logger.Info("Products processed for deletion", zap.Int("count", len(skus)))
+	c.JSON(status, gin.H{
+		"message": "Products processed for deletion",
 		"results": results,
 	})
+}
+
+func (h *ProductHandler) readRequestBody(c *gin.Context) ([]byte, error) {
+	body, err := c.GetRawData()
+	if err != nil {
+		h.logger.Error("Failed to read request body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return nil, err
+	}
+	return body, nil
+}
+
+func determineHTTPStatus(results []batchResult) int {
+	allOk := true
+	allConflicts := true
+	for _, r := range results {
+		if r.Status != "ok" {
+			allOk = false
+		}
+		if r.Status != "conflict" {
+			allConflicts = false
+		}
+	}
+	switch {
+	case allOk:
+		return http.StatusCreated // 201
+	case allConflicts:
+		return http.StatusConflict // 409
+	default:
+		return http.StatusMultiStatus // 207
+	}
 }
