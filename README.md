@@ -298,16 +298,30 @@ make test
     ```
     Isso iniciará o RabbitMQ e outros serviços que a API depende.
 
-5.  **Compile e execute a API com live reload**
+4.5 **Caso o sistema operacional seja Windows**
+   - Alterar no **Makefile** o comando build (linha 10) para:
+   ```bash
+      build: docs
+      	@echo "Building..."
+      	@go build -o main.exe cmd/api/main.go
+   ```
+   - Alterar no **Makefile** o comando build (linha 16) para:
+   ```bash
+      air-build: docs
+      	@go build -o ./tmp/main.exe cmd/api/main.go
+   ```
+   
+
+6.  **Compile e execute a API com live reload**
     ```bash
     air
     ```
 
-6.  **Acesse a API e Swagger**
+7.  **Acesse a API e Swagger**
     - **API**: `http://localhost:8988`
     - **Swagger**: `http://localhost:8988/swagger/index.html`
 
-7.  **Rodar os testes**
+8.  **Rodar os testes**
     ```bash
     make test
     ```
