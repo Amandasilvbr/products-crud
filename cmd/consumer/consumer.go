@@ -319,7 +319,6 @@ func (c *Consumer) sendEmail(events []ProductEvent) error {
             .header h2 { text-align: center; margin-top: 10px; }
             .content { padding: 20px; }
             .footer { background-color: #f5f5f5; font-size: 12px; text-align: center; margin-top: 20px; padding: 15px; }
-            .image-footer { max-width: 150px; margin: 10px auto 20px; display: block; padding: 0 15px; }
         </style>
     </head>
     <body>
@@ -343,7 +342,6 @@ func (c *Consumer) sendEmail(events []ProductEvent) error {
             .header h2 { text-align: center; margin-top: 10px; }
             .content { padding: 20px; }
             .footer { background-color: #f5f5f5; font-size: 12px; text-align: center; margin-top: 20px; padding: 15px; }
-            .image-footer { max-width: 150px; margin: 10px auto 20px; display: block; padding: 0 15px; }
         </style>
     </head>
     <body>
@@ -375,7 +373,6 @@ func (c *Consumer) sendEmail(events []ProductEvent) error {
             </div>
             <div class="footer">
                 <p>Atenciosamente,<br>Equipe de Produtos</p>
-                <img src="https://i.ibb.co/M5gN8pXr/karhub-logo-01-main-e1721220516367.png" alt="Logo da Empresa" class="image-footer">
             </div>
         </div>
     </body>
