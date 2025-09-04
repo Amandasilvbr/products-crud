@@ -340,14 +340,6 @@ graph TD
     C --> D[Envia email de notificação]
     D --> E[Email contém detalhes da operação]
 ```
-#### Exemplo: operação CREATE
-
-<div align="center">
-  <img src="https://i.ibb.co/xKyj8QdG/Screenshot-2025-08-31-at-15-38-35.png" 
-       alt="Exemplo de Email" 
-       width="50%">
-</div>
-
 
 ---
 
